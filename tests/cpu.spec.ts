@@ -110,3 +110,51 @@ test('pause, keyboard stepping, and responsive layouts remain usable', async ({ 
     await page.screenshot({ path: `test-results/cpu-${width}.png`, fullPage: true });
   }
 });
+
+test('block diagram follows transfers, forwarding, memory writes and inspected history', async ({ page }) => {
+  await page.goto('/cpu/');
+  await expect(page.getByRole('heading', { name: 'Where does this byte go?' })).toBeVisible();
+  await expect(page.getByTestId('cpu-path-pc-program')).toHaveAttribute('data-active', 'false');
+  await page.getByRole('button', { name: 'Next cycle', exact: true }).click();
+  await expect(page.getByTestId('cpu-path-pc-program')).toHaveAttribute('data-active', 'true');
+  await page.getByRole('button', { name: 'Inspect Instruction memory', exact: true }).click();
+  await expect(page.getByTestId('cpu-block-inspector')).toContainText('Slot 0');
+  for (let n = 0; n < 3; n++) await page.getByRole('button', { name: 'Next cycle', exact: true }).click();
+  await expect(page.getByTestId('cpu-path-ram-writeback')).toHaveAttribute('data-active', 'true');
+  await page.getByRole('button', { name: 'Inspect Data RAM', exact: true }).focus();
+  await page.keyboard.press('Space');
+  await expect(page.getByTestId('cpu-block-inspector')).toContainText('RAM[0x10] = 7');
+  await page.getByRole('button', { name: 'Next cycle', exact: true }).click();
+  await expect(page.getByTestId('cpu-path-writeback-registers')).toHaveAttribute('data-active', 'true');
+  await page.getByRole('button', { name: 'Next cycle', exact: true }).click();
+  await expect(page.getByTestId('cpu-path-alu-operands')).toHaveAttribute('data-active', 'true');
+  await page.getByRole('button', { name: 'Inspect Operand selector', exact: true }).click();
+  await expect(page.getByTestId('cpu-block-inspector')).toContainText('r2 = 12 from the EX/MEM');
+  await page.locator('.cpu-block-diagram').screenshot({ path: 'test-results/cpu-datapath-forwarding.png' });
+  await page.getByRole('button', { name: 'Next cycle', exact: true }).click();
+  await expect(page.getByTestId('cpu-path-operands-ram')).toHaveAttribute('data-active', 'true');
+  await page.getByText('All transfers this clock', { exact: false }).click();
+  await expect(page.getByTestId('cpu-datapath-transfers')).toContainText('Latched store byte 12 → RAM[0x11]');
+  await page.getByLabel('Inspect clock').fill('4');
+  await expect(page.getByTestId('cpu-path-ram-writeback')).toHaveAttribute('data-active', 'true');
+  await expect(page.getByTestId('cpu-path-operands-ram')).toHaveAttribute('data-active', 'false');
+  await page.getByLabel('RAM latency', { exact: false }).fill('3');
+  for (let n = 0; n < 5; n++) await page.getByRole('button', { name: 'Next cycle', exact: true }).click();
+  await expect(page.getByTestId('cpu-path-hazard-hold')).toHaveAttribute('data-active', 'true');
+  await expect(page.getByTestId('cpu-path-pc-program')).toHaveAttribute('data-active', 'false');
+  await expect(page.getByTestId('cpu-block-ram')).toHaveClass(/waiting/);
+});
+
+test('block diagram fits its scroll region and supports keyboard inspection on small screens', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto('/cpu/');
+  const region = page.getByRole('region', { name: 'CPU block diagram, scroll horizontally' });
+  await expect(region).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Inspect Write-back selector', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('cpu-block-inspector')).toContainText('Selects a load byte');
+  expect(await region.evaluate(el => el.scrollLeft)).toBeGreaterThan(0);
+  await page.locator('.cpu-block-diagram').screenshot({ path: 'test-results/cpu-datapath-mobile.png' });
+});

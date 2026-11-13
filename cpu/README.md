@@ -8,6 +8,14 @@ From the repository root, run `npm run dev` and open `/cpu/`. The default progra
 
 Choose a preset or edit assembly and select **Assemble & reset**. Edit initial register or RAM bytes using decimal, hexadecimal (`0xFF`), or signed byte values; Enter or leaving the field commits an edit and resets execution. Program edits require assembly. Hardware changes reset execution, retaining the same input bytes. Run pauses automatically at 10,000 cycles; manual stepping can continue. Reset clears history while retaining the selected program, settings, and initial bytes. Choosing a preset replaces the program and input bytes.
 
+## Block diagram
+
+The clock-linked datapath shows the program counter, instruction memory, IF/ID instruction latch, decoder/control unit, register file, immediate value, operand selector, ALU, next-PC selector, data RAM, write-back selector, and hazard control. Select any block by mouse or keyboard to see its role, current value, and connected transfers. Expand **All transfers this clock** for the complete trace.
+
+Green paths carry data, amber paths carry addresses, purple dashed paths carry control, and blue dotted paths forward results. Dim paths show available connections. Moving highlights appear during playback and respect reduced-motion preferences. The drawing scrolls within its panel on smaller screens; keyboard focus brings offscreen blocks into view.
+
+The decoder selects register numbers; register bytes travel toward execute. Paths across stages represent pipeline latches, so the decoder and ALU may be working on different instructions in one snapshot. Transfers identify the instruction they belong to. The diagram derives movement from consecutive recorded snapshots and latched operands, including forwarded values, rather than re-running instructions or parsing explanatory text. Held stages do not repeat transfers; the memory completion and later register write-back appear in their respective clocks. History inspection restores the same paths.
+
 ## Architecture
 
 - Eight byte registers, r0–r7; r0 is hardwired to zero. Register arithmetic wraps modulo 256. The inspector shows binary, hex, unsigned decimal, and two's-complement signed decimal.

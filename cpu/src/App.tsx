@@ -1,3 +1,4 @@
+import Datapath from './Datapath';
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, BookOpen, ChevronLeft, ChevronRight, Cpu, Gauge, Lightbulb, Pause, Play, RotateCcw, Sparkles, StepForward } from 'lucide-react';
 import { assemble, byte, DEFAULT_CONFIG, hex, initialState, literal, PRESETS, presetInitial, run, signed, sources, STAGES, stepCycle, type Config, type Initial, type Program, type State, type Token } from './model';
@@ -101,6 +102,7 @@ export default function App() {
               const t = state.pipe[stage], held = state.held.includes(stage);
               return <div key={stage} className={`cpu-stage ${t ? 'occupied' : ''} ${held ? 'waiting' : ''}`} style={{ '--stage': t ? color(t) : colors[n] } as React.CSSProperties}><div><b>{stage}</b><span>{held ? 'WAIT' : `0${n + 1}`}</span></div><small>{stageNames[n]}</small><p title={t?.instruction.text}>{t ? t.instruction.op : '—'}</p><span className="cpu-stage-detail">{t ? `#${t.id + 1} · slot ${t.instruction.pc}` : state.cycle ? 'bubble' : 'empty'}</span>{n < 4 && <ArrowRight className="cpu-stage-arrow" size={13} />}</div>;
             })}</div><div className="cpu-datapath"><span className={state.pipe.EX ? 'active' : ''}>ALU <b>{executeDetail(state.pipe.EX)}</b></span><span className={state.access || state.pipe.MEM?.remaining ? 'active' : ''}>↔ RAM <b>{state.access ? `[0x${hex(state.access.address)}] ${state.access.write ? '←' : '→'} ${state.access.value}` : state.pipe.MEM?.remaining ? `[0x${hex(state.pipe.MEM.address!)}] · ${state.pipe.MEM.remaining} left` : 'no transfer'}</b></span></div></div>
+            <Datapath state={state} previous={before} config={config} playing={playing} />
             <div className={`cpu-explanation ${state.fault ? 'cpu-error' : ''}`} aria-live="polite" aria-atomic="true"><span className="eyebrow">CYCLE {state.cycle} / WHAT HAPPENED</span><ul>{state.events.map((event, n) => <li key={n}>{event}</li>)}</ul></div>
             {state.cycle >= 10000 && !state.done && <p className="cpu-notice">Automatic execution paused at 10,000 cycles. Check for an infinite loop, reset, or continue with Next cycle.</p>}
             <div className="cpu-penalties"><span><b data-testid="cpu-data-stalls">{state.dataStalls}</b> dependency stalls</span><span><b data-testid="cpu-ram-waits">{state.memoryStalls}</b> RAM wait cycles</span><span><b>{state.flushed}</b> flushed instructions</span></div>
