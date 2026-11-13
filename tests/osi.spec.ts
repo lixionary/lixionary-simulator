@@ -49,7 +49,7 @@ test('bad FCS stops at layer two, then TCP retransmits identical bytes and compl
   await inspector(page);
   await expect(page.locator('.pl-check-result')).toContainText('Received FCS fails');
   await page.getByRole('button', { name: 'Hex bytes', exact: true }).click();
-  await page.getByLabel('Show decoded receive bytes').check();
+  await expect(page.getByLabel('Show decoded receive bytes')).toBeChecked();
   await expect(page.locator('.pl-hex button.changed')).toHaveCount(1);
   await page.getByRole('button', { name: /No ACK · retransmission timeout/ }).click();
   await expect(current(page)).toContainText('same sequence number');
@@ -83,6 +83,8 @@ test('UDP switches to DNS port 53; corruption/drop time out without retry and cl
 
 test('selecting hex bytes locates Manchester and MLT-3 signals; PHY switch resets the journey', async ({ page }) => {
   await page.goto('/osi/');
+  await timeline(page);
+  await page.locator('.pl-timeline button').filter({ hasText: 'Client · Data link' }).first().click();
   await inspector(page);
   await page.getByRole('button', { name: 'Hex bytes', exact: true }).click();
   await page.getByRole('button', { name: 'Byte 12: 08, link', exact: true }).click();
@@ -144,4 +146,63 @@ for (const width of [390, 768, 1440]) test(`responsive layout and inspector at $
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(errors).toEqual([]);
   await page.screenshot({ path: testInfo.outputPath(`packet-lab-${width}.png`), fullPage: true });
+});
+
+
+for (const protocol of ['tcp', 'udp'] as const) for (const packet of ['request', 'response'] as const) {
+  test(`${protocol} ${packet}: hex bytes follow encapsulation down and decapsulation up`, async ({ page }) => {
+    await page.goto('/osi/');
+    if (protocol === 'udp') await page.getByRole('button', { name: /UDP DNS/ }).click();
+    await page.getByLabel('Jump to a packet').selectOption(packet);
+    await inspector(page);
+    await page.getByRole('button', { name: 'Hex bytes', exact: true }).click();
+    const hexView = page.locator('.pl-hex');
+    const payloadSize = await hexView.locator('button').count();
+    expect(payloadSize).toBeGreaterThan(0);
+    const transportSize = protocol === 'tcp' ? 20 : 8;
+    async function expectLayer(layer: number) {
+      const expectedSize = layer >= 5 ? payloadSize : layer === 4 ? payloadSize + transportSize : layer === 3 ? payloadSize + transportSize + 20 : Math.max(64, payloadSize + transportSize + 38);
+      const name = layer <= 2 ? 'Ethernet frame' : layer === 3 ? 'IPv4 packet' : layer === 4 ? protocol === 'tcp' ? 'TCP segment' : 'UDP datagram' : protocol === 'tcp' ? 'HTTP message' : 'DNS message';
+      await expect(hexView).toHaveAttribute('aria-label', name + ' bytes');
+      await expect(hexView.locator('button')).toHaveCount(expectedSize);
+      await expect(hexView.locator('button.link')).toHaveCount(layer <= 2 ? 14 : 0);
+      await expect(hexView.locator('button.fcs')).toHaveCount(layer <= 2 ? 4 : 0);
+      await expect(hexView.locator('button.network')).toHaveCount(layer <= 3 ? 20 : 0);
+      await expect(hexView.locator('button.transport')).toHaveCount(layer <= 4 ? transportSize : 0);
+      await expect(hexView.locator('button.application')).toHaveCount(payloadSize);
+      await expect(hexView.locator('button').first()).toHaveAccessibleName(/^Byte 0:/);
+      await expect(page.locator('.pl-check-math')).toHaveCount(layer <= 2 ? 1 : 0);
+    }
+    // Sender: add only the current layer's header.
+    for (const layer of [7, 6, 5, 4, 3, 2, 1]) {
+      await expectLayer(layer);
+      if (layer === 4) {
+        await page.getByRole('button', { name: 'client layer 2: Data link', exact: true }).click();
+        await expectLayer(4); // Exploring a layer does not advance the actual packet.
+      }
+      await page.getByRole('button', { name: 'Next step', exact: true }).click();
+    }
+    await expectLayer(1); // On the cable.
+    await page.getByRole('button', { name: 'Next step', exact: true }).click();
+    // Receiver: discard each enclosing header before moving upward.
+    for (const layer of [1, 2, 3, 4, 5, 6, 7]) {
+      await expectLayer(layer);
+      await expect(page.getByLabel('Show decoded receive bytes')).toBeChecked();
+      if (layer < 7) await page.getByRole('button', { name: 'Next step', exact: true }).click();
+    }
+    // Backward navigation restores the transport and IP envelopes.
+    for (let n = 0; n < 4; n++) await page.getByRole('button', { name: 'Previous step', exact: true }).click();
+    await expectLayer(3);
+  });
+}
+
+test('transport hex byte zero maps to the correct frame offset in the transmitted signal', async ({ page }) => {
+  await page.goto('/osi/');
+  await inspector(page);
+  await page.getByRole('button', { name: 'Hex bytes', exact: true }).click();
+  await expect(page.locator('.pl-hex button')).toHaveCount(20); // SYN: only the TCP header.
+  await expect(page.locator('.pl-hex button.link')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Byte 0: C0, transport', exact: true }).click();
+  await expect(page.getByLabel('Signal frame byte', { exact: true })).toHaveValue('34');
+  await expect(page.getByRole('img', { name: 'Manchester waveform for frame byte 34', exact: true })).toBeVisible();
 });

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, Cable, Check, ChevronLeft, ChevronRight, CircleHelp, Code2, Layers, Pause, Play, RotateCcw, ShieldCheck, Unplug, Zap } from 'lucide-react';
 import { CLIENT, DEFAULTS, LAYERS, SERVER, crc32, hex, inspectReceived, read16, simulate, text, validateConfig, type Config, type Packet, type Step } from './model';
 import { CODES, encodePhysical, wireBits, type Trace } from './physical';
+import { layerBytes } from './inspector';
 
 const colorFor = (offset: number, p: Packet) => offset < 14 ? 'link' : offset < 34 ? 'network' : offset < 34 + (p.protocol === 'tcp' ? 20 : 8) ? 'transport' : offset < 14 + p.ip.length ? 'application' : offset < p.frame.length - 4 ? 'padding' : 'fcs';
 const address = (bytes: number[]) => bytes.join('.');
@@ -32,11 +33,14 @@ function Waveform({ trace, offset }: { trace: Trace; offset: number }) {
   </svg></div>;
 }
 function Inspector({ packet, phy, layer, side, offset, setOffset }: { packet: Packet; phy: Config['phy']; layer: number; side: Step['side']; offset: number; setOffset: (n: number) => void }) {
-  const [received, setReceived] = useState(false);
+  const [byteSource, setByteSource] = useState<{ packet: Packet; side: Step['side']; received: boolean } | null>(null);
+  const received = byteSource?.packet === packet && byteSource.side === side ? byteSource.received : side === 'receiver';
   const [tab, setTab] = useState<'fields' | 'bytes' | 'signal'>('fields');
   const trace = useMemo(() => encodePhysical(packet.frame, phy), [packet, phy]);
   const safeOffset = Math.min(offset, packet.frame.length - 1);
   const bytes = received ? packet.received : packet.frame;
+  const view = layerBytes(packet, layer, received);
+  const selectedByte = Math.max(view.frameOffset, Math.min(safeOffset, view.frameOffset + view.bytes.length - 1));
   const checks = inspectReceived(packet.received);
   const crc = crc32(bytes.slice(0, -4));
   const wireCheck = Array.from(bytes.slice(-4)).map(b => hex(b)).join(' ');
@@ -45,7 +49,7 @@ function Inspector({ packet, phy, layer, side, offset, setOffset }: { packet: Pa
     <summary><span><Code2 size={17}/> Packet & signal inspector</span><span className="pl-summary-hint">Fields, bytes & waveforms <ChevronRight size={15}/></span></summary>
     <div className="pl-inspector-body">
       <div className="pl-tabs" role="group" aria-label="Inspector view">{(['fields', 'bytes', 'signal'] as const).map(t => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t === 'fields' ? 'Packet fields' : t === 'bytes' ? 'Hex bytes' : 'Copper signal'}</button>)}</div>
-      <p className="pl-hint">{packet.title} · {packetName(packet)} · complete frame, {packet.frame.length} bytes. Inspecting layer {layer}; {side === 'wire' ? 'crossing the link' : side + ' side'}.</p>
+      <p className="pl-hint">{packet.title} · {packetName(packet)} · {tab === 'bytes' ? `${view.name}, ${view.bytes.length} bytes` : `complete transmitted frame, ${packet.frame.length} bytes`}. Current step: layer {layer}; {side === 'wire' ? 'crossing the link' : side + ' side'}.</p>
       {tab === 'fields' && <>
         <div className="pl-field-grid"><section><h4>Application · layers 7–5</h4><p>{packet.payload.length ? packet.protocol === 'tcp' ? 'HTTP text; response body is UTF-8. Request/response tracks the conversation.' : 'DNS binary message; transaction ID 0x1234; A (type 1), IN (class 1).' : 'TCP control packet: no application bytes.'}</p>{packet.payload.length > 0 && (packet.protocol === 'tcp' ? <pre>{text(packet.payload)}</pre> : <dl><dt>Question</dt><dd>One A query</dd><dt>Answers</dt><dd>{packet.direction === 'back' ? '1 · 192.0.2.42 · TTL 60 s' : '0'}</dd><dt>Name encoding</dt><dd>Length-prefixed labels, terminated by zero</dd></dl>)}</section>
         <section><h4>Transport · layer 4</h4><dl><dt>Source → destination port</dt><dd>{read16(packet.transport, 0)} → {read16(packet.transport, 2)}</dd><dt>Header / data</dt><dd>{packet.transport.length - packet.payload.length} / {packet.payload.length} bytes</dd><dt>Checksum</dt><dd>0x{hex(read16(packet.transport, packet.protocol === 'tcp' ? 16 : 6), 4)}</dd>{packet.protocol === 'tcp' && <><dt>Sequence / acknowledgment</dt><dd>{packet.seq} / {packet.ack}</dd><dt>Flags</dt><dd>{[['FIN', 1], ['SYN', 2], ['PSH', 8], ['ACK', 16]].filter(([, bit]) => packet.flags & Number(bit)).map(([name]) => name).join(' + ')}</dd></>}</dl><p>16-bit one's-complement checksum covers the IP pseudo-header, transport header, and payload. An odd byte is padded for calculation only.</p></section>
@@ -54,11 +58,14 @@ function Inspector({ packet, phy, layer, side, offset, setOffset }: { packet: Pa
         <div className="pl-check-result"><ShieldCheck size={20}/><div><strong>{packet.fault === 'drop' ? 'Frame absent: receiver cannot check it.' : checks.fcs ? 'Received FCS matches.' : 'Received FCS fails: discard at layer 2.'}</strong><p>{packet.fault === 'clean' ? 'IPv4 and transport checksums also pass.' : packet.fault === 'corrupt' ? 'Upper-layer checks are not reached. The receiver does not compare against a copy of the sent message.' : 'No transport acknowledgment can be generated for this frame.'}</p></div></div>
       </>}
       {tab === 'bytes' && <>
-        <div className="pl-byte-heading"><h4>Ethernet frame · click a byte to locate it in the signal</h4><label><input type="checkbox" checked={received} onChange={e => setReceived(e.target.checked)}/> Show decoded receive bytes</label></div>
-        {received && packet.fault !== 'clean' && <p className="pl-warning">{packet.fault === 'drop' ? 'Dropped frame: these are the bytes that would have arrived; no receive frame exists.' : `Teaching fault: byte ${bodyStart} changed after PHY decoding. Original FCS preserved.`}</p>}
-        <div className="pl-hex" aria-label="Ethernet frame bytes">{Array.from(bytes).map((b, i) => <button className={`${colorFor(i, packet)} ${safeOffset === i ? 'selected' : ''} ${b !== packet.frame[i] ? 'changed' : ''}`} key={i} aria-label={`Byte ${i}: ${hex(b)}, ${colorFor(i, packet)}`} aria-pressed={safeOffset === i} onClick={() => { setOffset(i); setTab('signal'); }}>{hex(b)}</button>)}</div>
-        <p className="pl-hint">Offsets start at destination MAC byte 0. Hex display is byte-oriented; copper wire order is shown in the signal view.</p>
-        <div className="pl-check-math"><p>CRC-32({received ? 'received' : 'sent'} bytes 0–{bytes.length - 5}) = <strong>0x{hex(crc, 8)}</strong></p><p>FCS in frame: <strong>{wireCheck}</strong> (least-significant CRC byte first).</p><p>Polynomial 0x04C11DB7 · reflected implementation 0xEDB88320 · initial and final XOR 0xFFFFFFFF.</p></div>
+        <div className="pl-byte-heading"><h4>{view.name} · {view.bytes.length} bytes</h4><label><input type="checkbox" checked={received} onChange={e => setByteSource({ packet, side, received: e.target.checked })}/> Show decoded receive bytes</label></div>
+        {received && packet.fault !== 'clean' && <p className="pl-warning">{packet.fault === 'drop' ? 'Dropped frame: these are the bytes that would have arrived; no receive frame exists.' : `Teaching fault: frame byte ${bodyStart} changed after PHY decoding. Original FCS preserved.`}</p>}
+        <div className="pl-hex" aria-label={`${view.name} bytes`}>{Array.from(view.bytes).map((b, i) => {
+          const frameOffset = view.frameOffset + i;
+          return <button className={`${colorFor(frameOffset, packet)} ${selectedByte === frameOffset ? 'selected' : ''} ${b !== packet.frame[frameOffset] ? 'changed' : ''}`} key={frameOffset} data-frame-offset={frameOffset} aria-label={`Byte ${i}: ${hex(b)}, ${colorFor(frameOffset, packet)}`} aria-pressed={selectedByte === frameOffset} onClick={() => { setOffset(frameOffset); setTab('signal'); }}>{hex(b)}</button>;
+        })}</div>
+        <p className="pl-hint">{view.bytes.length ? `Offsets start at byte 0 of this ${view.name.toLowerCase()}. Click a byte to locate its position in the complete transmitted signal.` : 'This control packet has no application data.'} Headers appear as the sender moves down the stack and are removed as the receiver moves up.</p>
+        {layer <= 2 && <div className="pl-check-math"><p>CRC-32({received ? 'received' : 'sent'} bytes 0–{bytes.length - 5}) = <strong>0x{hex(crc, 8)}</strong></p><p>FCS in frame: <strong>{wireCheck}</strong> (least-significant CRC byte first).</p><p>Polynomial 0x04C11DB7 · reflected implementation 0xEDB88320 · initial and final XOR 0xFFFFFFFF.</p></div>}
       </>}
       {tab === 'signal' && <>
         <div className="pl-byte-heading"><h4>{phy === '10base-t' ? '10BASE-T · Manchester' : '100BASE-TX · 4B/5B → scramble → MLT-3'}</h4><label>Frame byte <input className="pl-offset" aria-label="Signal frame byte" type="number" min={0} max={packet.frame.length - 1} value={safeOffset} onChange={e => setOffset(Math.max(0, Math.min(packet.frame.length - 1, Number(e.target.value))))}/></label></div>
@@ -114,7 +121,7 @@ export default function App() {
             <div className="pl-jump"><label htmlFor="pl-jump">Jump to a packet</label><select id="pl-jump" value={packet?.id ?? ''} disabled={!step} onChange={e => { setPlaying(false); move(steps.findIndex(s => s.packet?.id === e.target.value)); }}>{packets.map(s => <option key={s.packet!.id} value={s.packet!.id}>{s.packet!.title}</option>)}</select></div>
           </section>
           <section className="pl-layer-card" aria-label="Selected layer"><div className="pl-layer-title"><span className="pl-layer-number">0{layer}</span><div><span className="eyebrow">02 / UNDERSTAND THE LAYER</span><h2>{layerInfo.name}</h2></div><span className="pl-pill">{layerInfo.unit}</span></div><p>{layerInfo.detail}</p>{packet && <Envelope packet={packet} layer={layer}/>}<div className="pl-legend"><span className="application">Application</span><span className="transport">Transport</span><span className="network">IPv4</span><span className="link">Ethernet</span><span className="fcs">FCS</span></div>{layer >= 5 && <p className="pl-hint">Layers 5 and 6 describe responsibilities here, not extra wire headers. The full inspector remains available at every step.</p>}</section>
-          {packet && <Inspector packet={packet} phy={config.phy} layer={layer} side={step?.side ?? 'sender'} offset={offset} setOffset={setOffset}/>}
+          {packet && <Inspector packet={packet} phy={config.phy} layer={step?.layer ?? 7} side={step?.side ?? 'sender'} offset={offset} setOffset={setOffset}/>}
           <details className="pl-timeline"><summary>See the complete journey <span>{steps.length} steps</span></summary><ol>{steps.map((s, i) => <li key={i}><button aria-current={i === index ? 'step' : undefined} onClick={() => { setPlaying(false); move(i); }}><span>{String(i + 1).padStart(2, '0')}</span>{s.title}{s.result === 'success' && <Check size={14}/>}</button></li>)}</ol></details>
         </div>
       </section>
