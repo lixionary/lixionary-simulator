@@ -1,0 +1,26 @@
+import type { Config } from './sim/types';
+export type Experiment = { title: string; tag: string; description: string; task: string; observe: string; stage: number; config: Partial<Config> };
+export const EXPERIMENTS: Experiment[] = [
+  { title: 'Turn up the noise', tag: '01 · NOISE', description: 'When the air gets messy, bits get lost.',
+    task: 'Lower SNR from 24 dB toward 0 dB. Then try 256-QAM.', observe: 'The constellation cloud spreads. Densely packed symbols become easier to confuse, and your message starts to change.', stage: 4,
+    config: { snr: 24, modulation: 'QPSK', profile: 'awgn', coding: 'none', equalizer: 'mmse' } },
+  { title: 'More bits, less room', tag: '02 · MODULATION', description: 'See the trade-off behind faster transmission.',
+    task: 'Switch between BPSK, QPSK, 16-QAM, 64-QAM, and 256-QAM at 6 dB SNR.', observe: 'More bits fit in each symbol, but the ideal points get closer together. Noise can push a received point into a neighbor’s territory.', stage: 1,
+    config: { snr: 6, profile: 'awgn', coding: 'none', modulation: 'QPSK' } },
+  { title: 'Echoes in the air', tag: '03 · MULTIPATH', description: 'A signal takes more than one path to you.',
+    task: 'Start with equalization off, then compare ZF and MMSE. Try both EPA and ETU.', observe: 'Echoes rotate and scale different subcarriers. Pilots help the receiver estimate the channel, though sparse pilot estimates have limits.', stage: 5,
+    config: { profile: 'etu', snr: 12, modulation: '16-QAM', equalizer: 'off', coding: 'none' } },
+  { title: 'Give echoes some space', tag: '04 · CYCLIC PREFIX', description: 'A small copy at the front protects the useful signal.',
+    task: 'Compare the 16-sample and 32-sample prefixes with a 22-sample echo. Keep noise off to isolate the effect.', observe: 'The long echo spills beyond the short prefix into the FFT window. A longer prefix restores protection; pilot-estimation errors can still remain.', stage: 3,
+    config: { profile: 'custom', taps: [{ delay: 0, gain: 1, phase: 0 }, { delay: 22, gain: 0.8, phase: 1.2 }], cp: 16, noise: false, modulation: '16-QAM', equalizer: 'mmse', coding: 'none' } },
+  { title: 'A slightly wrong frequency', tag: '05 · FREQUENCY OFFSET', description: 'Small oscillator mismatches make a big difference.',
+    task: 'Set frequency offset to 0.2, then enable CFO compensation.', observe: 'A rotating signal leaks energy between subcarriers. Compensation using the known offset reverses this rotation.', stage: 4,
+    config: { cfo: 0.2, compensateCfo: false, profile: 'awgn', modulation: '16-QAM', snr: 24 } },
+  { title: 'Help your bits get home', tag: '06 · ERROR CORRECTION', description: 'Extra bits give the receiver a second chance.',
+    task: 'Compare uncoded, Hamming, and convolutional coding. For convolutional coding, try hard and soft decisions.', observe: 'Redundant bits can repair errors. Soft decisions also tell the decoder how confident each bit is. A failed CRC requests retransmission.', stage: 6,
+    config: { coding: 'none', snr: 0, modulation: 'QPSK', profile: 'awgn', equalizer: 'mmse' } },
+  { title: 'Find the symbol boundary', tag: '07 · SYNCHRONIZATION', description: 'The cyclic prefix tells the receiver where to look.',
+    task: 'Animate the correlation scan. Jump to the peak, then apply CP synchronization. Try changing the signal arrival delay, adding noise, or selecting an echo-filled channel.',
+    observe: 'Two windows 64 samples apart match when the prefix lines up with its copied tail. The detected boundary moves the actual FFT window and changes recovered data. CP timing can become uncertain in noise or multipath.',
+    stage: 5, config: { timingMode: 'manual', arrivalOffset: 24, manualOffset: 0, cp: 16, noise: false, profile: 'awgn', modulation: 'QPSK', coding: 'none', equalizer: 'zf' } },
+];
