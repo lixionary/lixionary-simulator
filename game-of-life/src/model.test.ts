@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cellIndex, DEFAULT_CONFIG, initialState, offspringCount, PRESETS, RULES, step, summarize, type Config, type World } from './model';
+import { cellIndex, configFromQuery, configToQuery, DEFAULT_CONFIG, initialState, offspringCount, PRESETS, RULES, step, summarize, type Config, type World } from './model';
 
 function fixture(count = 2, overrides: Partial<Config> = {}): World {
   const w = initialState({ ...DEFAULT_CONFIG, population: count, initialSickness: 0, transmission: 0, recovery: 0,
@@ -29,6 +29,28 @@ describe('repeatable worlds and bounded resources', () => {
     expect(initial).toEqual(snapshot);
     expect(initialState(DEFAULT_CONFIG, 43).cells).not.toEqual(initial.cells);
     expect(initialState(DEFAULT_CONFIG, 0).seed).toBe(0);
+  });
+  it('keeps the default run unchanged while immunity is zero', () => {
+    // Fingerprint recorded before immunity existed: the feature must not consume randomness when off.
+    const w = advance(initialState(), 300);
+    expect([w.rng, w.nextId, w.individuals.length]).toEqual([43742315, 238, 41]);
+    expect(w.deaths).toEqual({ age: 0, sickness: 195, starvation: 0, dehydration: 1 });
+    expect(w.history.every(s => s.immune === 0)).toBe(true);
+  });
+  it('round-trips a run through its shareable query and rejects invalid links', () => {
+    expect(configToQuery(DEFAULT_CONFIG, 42)).toBe('seed=42');
+    expect(configFromQuery('')).toBeNull();
+    expect(configFromQuery('?utm=x')).toBeNull();
+    expect(configFromQuery('?seed=7')).toEqual({ config: DEFAULT_CONFIG, seed: 7 });
+    expect(configFromQuery('?population=20')).toEqual({ config: { ...DEFAULT_CONFIG, population: 20 }, seed: 42 });
+    for (const [n, preset] of PRESETS.entries()) {
+      expect(configFromQuery(configToQuery(preset.config, n))).toEqual({ config: preset.config, seed: n });
+    }
+    expect(() => configFromQuery('?seed=7&population=501')).toThrow();
+    expect(() => configFromQuery('?seed=-1')).toThrow();
+    expect(() => configFromQuery('?seed=')).toThrow();
+    expect(() => configFromQuery('?transmission=abc')).toThrow();
+    expect(() => configFromQuery('?immunity=')).toThrow();
   });
   it('rejects invalid inputs rather than creating nonfinite worlds', () => {
     expect(() => initialState({ ...DEFAULT_CONFIG, population: 501 })).toThrow();
@@ -169,6 +191,47 @@ describe('health, mortality, and accounting', () => {
     expect(next.individuals.map(p => p.sick)).toEqual([false, true, false]);
     // The new infection has not accelerated aging on its infection tick.
     expect(next.individuals[1].lifeUsed).toBe(51);
+  });
+  it('protects a recovered individual until its immunity runs out', () => {
+    const w = fixture(2, { transmission: 1, recovery: 1, immunity: 3 });
+    w.cells[cellIndex(10, 10)] = { food: 100, water: 100 };
+    w.individuals[0].sick = true;
+    // The pair trade the illness: whoever recovers is shielded from the other for three ticks.
+    let next = step(w);
+    expect(next.individuals.map(p => [p.sick, p.immuneTicks])).toEqual([[false, 3], [true, 0]]);
+    expect(summarize(next).immune).toBe(1);
+    next = step(next);
+    expect(next.individuals.map(p => [p.sick, p.immuneTicks])).toEqual([[false, 2], [false, 3]]);
+    next = advance(next, 3);
+    expect(next.individuals.map(p => [p.sick, p.immuneTicks])).toEqual([[false, 0], [false, 0]]);
+    expect(advance(next, 20).history.at(-1)?.sick).toBe(0);
+  });
+  it('allows immediate reinfection when immunity is zero', () => {
+    const w = fixture(3, { transmission: 1, recovery: 1 });
+    w.cells[cellIndex(10, 10)] = { food: 100, water: 100 };
+    w.individuals[0].sick = true;
+    // 1 recovers while infecting 2 and 3; next tick they recover and reinfect 1.
+    expect(advance(w, 2).individuals.map(p => p.sick)).toEqual([true, false, false]);
+  });
+  it('records cumulative deaths by cause in every sample', () => {
+    const w = fixture(1); w.individuals[0].water = 0;
+    const next = advance(w, 3);
+    expect(next.history.map(s => s.causes.dehydration)).toEqual([0, 0, 0, 1]);
+    expect(next.history.at(-1)?.causes).toEqual(next.deaths);
+  });
+  it.each(PRESETS.map(p => [p.name, p.config] as const))('%s is not decided within 300 ticks', (_name, config) => {
+    for (const seed of [42, 7, 1234, 99, 5]) {
+      expect(advance(initialState(config, seed), 300).individuals.length, `seed ${seed}`).toBeGreaterThan(0);
+    }
+  });
+  it('keeps the balanced habitat alive through 1,000 ticks', () => {
+    for (const seed of [42, 7, 1234]) expect(advance(initialState(DEFAULT_CONFIG, seed), 1000).individuals.length, `seed ${seed}`).toBeGreaterThan(0);
+  });
+  it('lets the outbreak preset peak past half the population and then burn out', () => {
+    const w = advance(initialState(PRESETS[2].config), 400);
+    expect(Math.max(...w.history.map(s => s.population ? s.sick / s.population : 0))).toBeGreaterThan(0.5);
+    expect(w.history.some(s => s.immune > 0)).toBe(true);
+    expect(w.history.at(-1)?.sick).toBe(0);
   });
   it('cannot introduce illness without an infectious individual', () => {
     const next = advance(initialState({ ...DEFAULT_CONFIG, initialSickness: 0, transmission: 1 }), 200);

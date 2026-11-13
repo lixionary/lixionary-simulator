@@ -11,35 +11,38 @@ export type Config = {
   population: number; foodFullness: number; waterFullness: number;
   foodGrowth: number; waterGrowth: number; lifespan: number; maturity: number;
   birthChance: number; cooldown: number; initialSickness: number;
-  transmission: number; recovery: number; sicknessSeverity: number;
+  transmission: number; recovery: number; sicknessSeverity: number; immunity: number;
 };
 export const DEFAULT_CONFIG: Config = {
   population: 60, foodFullness: 80, waterFullness: 80,
   foodGrowth: 0.2, waterGrowth: 0.3, lifespan: 300, maturity: 40,
   birthChance: 0.12, cooldown: 20, initialSickness: 0.05,
-  transmission: 0.08, recovery: 0.025, sicknessSeverity: 3,
+  transmission: 0.08, recovery: 0.025, sicknessSeverity: 3, immunity: 0,
 };
 export const CONFIG_LIMITS: Record<keyof Config, readonly [number, number, number]> = {
   population: [0, 500, 1], foodFullness: [0, 100, 1], waterFullness: [0, 100, 1],
   foodGrowth: [0, 2, 0.05], waterGrowth: [0, 2, 0.05],
   lifespan: [100, 1000, 10], maturity: [5, 100, 1], birthChance: [0, 1, 0.01],
   cooldown: [1, 100, 1], initialSickness: [0, 1, 0.01], transmission: [0, 1, 0.01],
-  recovery: [0, 1, 0.005], sicknessSeverity: [1, 10, 0.5],
+  recovery: [0, 1, 0.005], sicknessSeverity: [1, 10, 0.5], immunity: [0, 500, 1],
 };
 export const PRESETS = [
   { name: 'Balanced habitat', hint: 'A little room to grow. Watch births, needs, and regrowth find their rhythm.', config: DEFAULT_CONFIG },
-  { name: 'Resource scarcity', hint: 'Small stocks, slow renewal. Can the next generation find enough to survive?', config: { ...DEFAULT_CONFIG, population: 100, foodFullness: 12, waterFullness: 8, foodGrowth: 0.05, waterGrowth: 0.05, initialSickness: 0 } },
-  { name: 'Disease outbreak', hint: 'A crowded habitat and a contagious illness. Recovery helps, but lost lifespan stays lost.', config: { ...DEFAULT_CONFIG, population: 150, initialSickness: 0.2, transmission: 0.3, recovery: 0.015, sicknessSeverity: 5 } },
+  { name: 'Resource scarcity', hint: 'Small stocks, slow renewal. A brief boom, then a bottleneck. Can a handful hold on?', config: { ...DEFAULT_CONFIG, population: 40, foodFullness: 10, waterFullness: 10, foodGrowth: 0.1, waterGrowth: 0.15, initialSickness: 0 } },
+  { name: 'Disease outbreak', hint: 'A crowded habitat and a contagious illness. Recovery brings a spell of immunity. Will enough outlast the wave to rebuild?', config: { ...DEFAULT_CONFIG, population: 150, initialSickness: 0.2, transmission: 0.3, recovery: 0.03, sicknessSeverity: 5, immunity: 60 } },
 ] satisfies { name: string; hint: string; config: Config }[];
 
 export type Individual = {
   id: number; x: number; y: number; age: number; lifeUsed: number; lifespan: number;
   food: number; water: number; sick: boolean; cooldown: number;
-  hungryTicks: number; thirstyTicks: number; parents: [number, number] | null;
+  hungryTicks: number; thirstyTicks: number; immuneTicks: number; parents: [number, number] | null;
 };
 export type Cell = { food: number; water: number };
 export type DeathCause = 'age' | 'sickness' | 'starvation' | 'dehydration';
-export type Sample = { tick: number; population: number; sick: number; food: number; water: number; births: number; deaths: number };
+export type Sample = {
+  tick: number; population: number; sick: number; immune: number; food: number; water: number;
+  births: number; deaths: number; causes: Record<DeathCause, number>;
+};
 export type World = {
   config: Config; seed: number; rng: number; tick: number; nextId: number;
   cells: Cell[]; individuals: Individual[]; births: number; deaths: Record<DeathCause, number>;
@@ -96,9 +99,10 @@ export function summarize(world: World): Sample {
   return {
     tick: world.tick, population: world.individuals.length,
     sick: world.individuals.filter(p => p.sick).length,
+    immune: world.individuals.filter(p => !p.sick && p.immuneTicks > 0).length,
     food: world.cells.reduce((n, cell) => n + cell.food, 0),
     water: world.cells.reduce((n, cell) => n + cell.water, 0),
-    births: world.births, deaths: Object.values(world.deaths).reduce((a, b) => a + b, 0),
+    births: world.births, deaths: Object.values(world.deaths).reduce((a, b) => a + b, 0), causes: { ...world.deaths },
   };
 }
 function lifespan(world: World): number { return Math.round(world.config.lifespan * (0.8 + random(world) * 0.4)); }
@@ -107,7 +111,7 @@ export function initialState(config: Config = DEFAULT_CONFIG, seed = 42): World 
     const [min, max] = CONFIG_LIMITS[key], value = config[key];
     if (!Number.isFinite(value) || value < min || value > max) throw new Error(`${key} must be between ${min} and ${max}.`);
   }
-  for (const key of ['population', 'maturity', 'cooldown', 'lifespan'] as const) {
+  for (const key of ['population', 'maturity', 'cooldown', 'lifespan', 'immunity'] as const) {
     if (!Number.isInteger(config[key])) throw new Error(`${key} must be a whole number.`);
   }
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xFFFFFFFF) throw new Error('Seed must be a whole number from 0 to 4294967295.');
@@ -122,7 +126,7 @@ export function initialState(config: Config = DEFAULT_CONFIG, seed = 42): World 
     const life = lifespan(world), age = Math.floor(random(world) * Math.min(config.maturity * 3, life * 0.5));
     world.individuals.push({ id: world.nextId++, x: Math.floor(random(world) * RULES.width), y: Math.floor(random(world) * RULES.height),
       age, lifeUsed: age, lifespan: life, food: 70 + random(world) * 25, water: 70 + random(world) * 25,
-      sick: false, cooldown: 0, hungryTicks: 0, thirstyTicks: 0, parents: null });
+      sick: false, cooldown: 0, hungryTicks: 0, thirstyTicks: 0, immuneTicks: 0, parents: null });
   }
   const infected = Math.round(config.population * config.initialSickness);
   shuffled(world, world.individuals).slice(0, infected).forEach(p => { p.sick = true; });
@@ -156,6 +160,7 @@ export function step(previous: World): World {
     p.thirstyTicks = p.water === 0 ? p.thirstyTicks + 1 : 0;
     p.age++; p.lifeUsed += p.sick ? config.sicknessSeverity : 1;
     p.cooldown = Math.max(0, p.cooldown - 1);
+    p.immuneTicks = Math.max(0, p.immuneTicks - 1);
     const cause: DeathCause | null = p.thirstyTicks >= RULES.dehydrationTicks ? 'dehydration'
       : p.hungryTicks >= RULES.starvationTicks ? 'starvation'
       : p.lifeUsed >= p.lifespan ? (p.lifeUsed > p.age ? 'sickness' : 'age') : null;
@@ -166,8 +171,8 @@ export function step(previous: World): World {
   const nearby = occupants(survivors);
   for (const p of survivors) {
     if (sickIds.has(p.id)) {
-      if (random(world) < config.recovery) p.sick = false;
-    } else {
+      if (random(world) < config.recovery) { p.sick = false; p.immuneTicks = config.immunity; }
+    } else if (p.immuneTicks === 0) {
       let contacts = 0;
       for (const index of neighborhood(p.x, p.y)) for (const other of nearby.get(index) ?? []) if (sickIds.has(other.id)) contacts++;
       if (contacts && random(world) < 1 - (1 - config.transmission) ** contacts) p.sick = true;
@@ -189,11 +194,35 @@ export function step(previous: World): World {
       parent.food -= RULES.parentCost * count; parent.water -= RULES.parentCost * count; parent.cooldown = config.cooldown;
     }
     for (let i = 0; i < count; i++) newborns.push({ id: world.nextId++, x: a.x, y: a.y, age: 0, lifeUsed: 0, lifespan: lifespan(world),
-      food: RULES.newbornReserve, water: RULES.newbornReserve, sick: false, cooldown: 0, hungryTicks: 0, thirstyTicks: 0, parents: [a.id, b.id] });
+      food: RULES.newbornReserve, water: RULES.newbornReserve, sick: false, cooldown: 0, hungryTicks: 0, thirstyTicks: 0, immuneTicks: 0, parents: [a.id, b.id] });
   }
   world.individuals = [...survivors, ...newborns].sort((a, b) => a.id - b.id);
   world.births += newborns.length;
   world.blockedBirths += world.blockedThisTick;
   world.history = [...previous.history.slice(-(RULES.historyLimit - 1)), summarize(world)];
   return world;
+}
+
+// Shareable runs: the seed plus every setting that differs from the defaults.
+export function configToQuery(config: Config, seed: number): string {
+  const params = new URLSearchParams({ seed: String(seed) });
+  for (const key of Object.keys(DEFAULT_CONFIG) as (keyof Config)[]) {
+    if (config[key] !== DEFAULT_CONFIG[key]) params.set(key, String(config[key]));
+  }
+  return params.toString();
+}
+// Returns null when the query names no run; throws when it names an invalid one.
+export function configFromQuery(search: string): { config: Config; seed: number } | null {
+  const params = new URLSearchParams(search), config = { ...DEFAULT_CONFIG };
+  let found = params.has('seed');
+  for (const key of Object.keys(DEFAULT_CONFIG) as (keyof Config)[]) {
+    const value = params.get(key);
+    if (value === null) continue;
+    if (value.trim() === '') throw new Error(`${key} must be a number.`);
+    config[key] = Number(value); found = true;
+  }
+  if (!found) return null;
+  const seedText = params.get('seed'), seed = seedText === null ? 42 : seedText.trim() === '' ? NaN : Number(seedText);
+  initialState(config, seed);
+  return { config, seed };
 }

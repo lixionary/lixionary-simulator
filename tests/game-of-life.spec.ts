@@ -60,7 +60,7 @@ test('draft settings, presets, and validation only change the world on apply', a
   await expect(page.getByTestId('life-sick')).toHaveText('30');
   await page.getByLabel('Start with an experiment').selectOption('1');
   await apply(page);
-  await expect(page.getByTestId('life-population')).toHaveText('100');
+  await expect(page.getByTestId('life-population')).toHaveText('40');
   await expect(page.getByTestId('life-sick')).toHaveText('0');
 });
 
@@ -114,6 +114,68 @@ test('empty worlds continue renewing resources and seed zero is supported', asyn
   await expect(page.getByTestId('life-food')).toHaveText('128');
   await expect(page.getByTestId('life-water')).toHaveText('192');
   await expect(page.getByText('Population extinct · habitat regenerating', { exact: true })).toBeVisible();
+});
+
+test('skip jumps ahead 100 ticks and playback pauses itself at extinction', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: 'Skip 100', exact: true }).click();
+  await expect(page.getByTestId('life-tick')).toHaveText('100');
+  await expect(page.getByRole('img', { name: 'Births and deaths from tick 0 to 100', exact: true })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Deaths by cause from tick 0 to 100', exact: true })).toBeVisible();
+  // One founder in a barren habitat cannot last: it dies of thirst within a few dozen ticks.
+  await page.goto('/game-of-life/?seed=3&population=1&foodFullness=0&waterFullness=0&foodGrowth=0&waterGrowth=0');
+  await expect(page.getByTestId('life-population')).toHaveText('1');
+  await page.getByLabel('Simulation speed').selectOption('30');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(page.getByText('Population extinct · habitat regenerating', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
+  const tick = await page.getByTestId('life-tick').innerText();
+  await page.waitForTimeout(250);
+  await expect(page.getByTestId('life-tick')).toHaveText(tick);
+  await expect(page.getByRole('button', { name: 'Skip 100', exact: true })).toBeEnabled();
+});
+
+test('a link replays its run, applied settings reach the address bar, and bad links fall back', async ({ page }) => {
+  await page.goto('/game-of-life/?seed=7&population=20&immunity=30');
+  await expect(page.getByTestId('life-population')).toHaveText('20');
+  await expect(page.getByTestId('life-seed')).toHaveText('7');
+  await expect(page.getByLabel('Starting population', { exact: true })).toHaveValue('20');
+  await expect(page.getByLabel('Random seed', { exact: true })).toHaveValue('7');
+  await step(page, 3);
+  const snapshot = await page.getByTestId('life-habitat').innerHTML();
+  await page.reload();
+  await step(page, 3);
+  expect(await page.getByTestId('life-habitat').innerHTML()).toBe(snapshot);
+  await page.getByLabel('Start with an experiment').selectOption('2');
+  await apply(page);
+  await expect(page).toHaveURL(/\?seed=7&population=150&.*immunity=60/);
+  await page.getByRole('button', { name: 'Copy link', exact: true }).click();
+  await expect(page.getByText(/^Link (copied|is in the address bar)$/)).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel('Start with an experiment')).toHaveValue('2');
+  await expect(page.getByTestId('life-sick')).toHaveText('30');
+  await page.goto('/game-of-life/?seed=7&population=501');
+  await expect(page.getByRole('alert')).toContainText('settings were ignored');
+  await expect(page.getByTestId('life-population')).toHaveText('60');
+  await expect(page.getByTestId('life-seed')).toHaveText('42');
+});
+
+test('selecting an individual rings its living family and immunity is visible', async ({ page }) => {
+  await page.goto('/game-of-life/?seed=42&birthChance=1');
+  await step(page, 5);
+  // Founders are #1 to #60, so #61 is the first child born in this run.
+  await page.getByLabel('Inspect individual', { exact: true }).selectOption('61');
+  await expect(page.getByTestId('life-inspector')).toContainText('Children');
+  await expect(page.getByTestId('life-inspector')).not.toContainText('Founding generation');
+  await expect(page.getByTestId('life-habitat').locator('[data-family]')).toHaveCount(2);
+  const parent = (await page.getByTestId('life-inspector').innerText()).match(/#(\d+) & #\d+/)![1];
+  await page.getByLabel('Inspect individual', { exact: true }).selectOption(parent);
+  await expect(page.getByTestId('life-inspector')).toContainText(/[1-9]\d* alive/);
+  await page.goto('/game-of-life/?seed=42&initialSickness=1&recovery=1&immunity=50');
+  await step(page);
+  await expect(page.getByTestId('life-sick')).toHaveText('0');
+  await page.getByLabel('Inspect individual', { exact: true }).selectOption('1');
+  await expect(page.getByTestId('life-inspector')).toContainText('Immune · 50 ticks');
 });
 
 test('birth limit is visible when a full healthy population tries to reproduce', async ({ page }) => {
