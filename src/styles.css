@@ -7,3 +7,5 @@
 
 .packet-card .card-art{background:#eaf0e4}.packet-card .card-art text{fill:#738669}.packet-card .eyebrow{color:#708266}.packet-card .new-tag{background:#f0f5e9;color:#748964;border-color:#cbd7bb}
 @media(min-width:1101px){.collection-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.cpu-card .card-art{background:#edf0e5}.cpu-card .card-art text{fill:#7b886b}.cpu-card .eyebrow{color:#748362}.cpu-card .new-tag{background:#f0f5e9;color:#748964;border-color:#cbd7bb}

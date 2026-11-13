@@ -10,6 +10,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
+        cpu: fileURLToPath(new URL('./cpu/index.html', import.meta.url)),
         collection: fileURLToPath(new URL('./index.html', import.meta.url)),
         lte: fileURLToPath(new URL('./4g-lte/index.html', import.meta.url)),
         sun: fileURLToPath(new URL('./apparent-annual-motion/index.html', import.meta.url)),
@@ -18,5 +19,5 @@ export default defineConfig({
       },
     },
   },
-  test: { include: ['osi/src/**/*.test.ts', '4g-lte/src/**/*.test.ts', 'apparent-annual-motion/src/**/*.test.ts', 'error-detection/src/**/*.test.ts'] },
+  test: { include: ['cpu/src/**/*.test.ts', 'osi/src/**/*.test.ts', '4g-lte/src/**/*.test.ts', 'apparent-annual-motion/src/**/*.test.ts', 'error-detection/src/**/*.test.ts'] },
 });
