@@ -9,3 +9,4 @@
 @media(min-width:1101px){.collection-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 .cpu-card .card-art{background:#edf0e5}.cpu-card .card-art text{fill:#7b886b}.cpu-card .eyebrow{color:#748362}.cpu-card .new-tag{background:#f0f5e9;color:#748964;border-color:#cbd7bb}
+.life-card .card-art{background:#edf1e5}.life-card .card-art text{fill:#778766}.life-card .eyebrow{color:#6f825e}.life-card .new-tag{background:#f0f5e9;color:#748964;border-color:#cbd7bb}

@@ -10,6 +10,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
+        life: fileURLToPath(new URL('./game-of-life/index.html', import.meta.url)),
         cpu: fileURLToPath(new URL('./cpu/index.html', import.meta.url)),
         collection: fileURLToPath(new URL('./index.html', import.meta.url)),
         lte: fileURLToPath(new URL('./4g-lte/index.html', import.meta.url)),
@@ -19,5 +20,5 @@ export default defineConfig({
       },
     },
   },
-  test: { include: ['cpu/src/**/*.test.ts', 'osi/src/**/*.test.ts', '4g-lte/src/**/*.test.ts', 'apparent-annual-motion/src/**/*.test.ts', 'error-detection/src/**/*.test.ts'] },
+  test: { include: ['game-of-life/src/**/*.test.ts', 'cpu/src/**/*.test.ts', 'osi/src/**/*.test.ts', '4g-lte/src/**/*.test.ts', 'apparent-annual-motion/src/**/*.test.ts', 'error-detection/src/**/*.test.ts'] },
 });

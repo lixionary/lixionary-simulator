@@ -5,6 +5,7 @@ A collection of interactive, browser-only teaching simulations. Each simulator h
 | Simulator | Local route | Source and model notes |
 | --- | --- | --- |
 | Collection | `/` | `src/` |
+| Population — Population Lab | `/game-of-life/` | [game-of-life/](game-of-life/README.md) |
 | CPU — Clockwork Lab | `/cpu/` | [cpu/](cpu/README.md) |
 | OSI Seven Layers — Packet Lab | `/osi/` | [osi/](osi/README.md) |
 | Error Detection — Bit Lab | `/error-detection/` | [error-detection/](error-detection/README.md) |
@@ -37,12 +38,15 @@ npm run build
 BROWSER_PRODUCTION=1 npm run test:browser
 ```
 
-`npm run preview` serves the production build. Deploy the contents of `dist/` to a static host that serves directory `index.html` files. All six pages build together. Serve over HTTP; do not open HTML files directly from disk.
+`npm run preview` serves the production build. Deploy the contents of `dist/` to a static host that serves directory `index.html` files. All seven pages build together. Serve over HTTP; do not open HTML files directly from disk.
 
 ## Project layout
 
 ```text
 src/                          Collection page and shared base styles
+game-of-life/
+  index.html                  Population Lab entry point
+  src/                        Seeded ecosystem engine, habitat UI, unit tests
 cpu/
   index.html                  CPU Lab entry point
   src/                        Assembler, pipeline engine, UI, unit tests
@@ -60,7 +64,7 @@ apparent-annual-motion/
 error-detection/
   index.html                  Bit Lab entry point
   src/                        Error detection algorithms, traces, UI, unit tests
-tests/                        Collection, CPU, Sun, Bit Lab, and Packet Lab browser scenarios
+tests/                        Collection and simulator browser scenarios
 vite.config.ts                Multi-page build and unit-test discovery
 playwright.config.ts          Shared browser-test server
 ```
