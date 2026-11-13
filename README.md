@@ -93,7 +93,7 @@ The `production` GitHub environment records deployments. Pushes to other branche
 
 ### Initial VPS setup
 
-The VPS needs Docker with Compose v2 supporting `up --wait`, Nginx, Certbot's Nginx plugin, Bash, curl, and flock. `lixsu` needs Docker access and ownership of the deployment directory. Create the directory once:
+The VPS needs Docker with Compose v2 or newer supporting `up --wait`, Nginx, Certbot's Nginx plugin, Bash, curl, and flock. Install the Compose plugin [system-wide](https://docs.docker.com/compose/install/linux/) so it also works with the deployment script's temporary `DOCKER_CONFIG`. `lixsu` needs Docker access and ownership of the deployment directory. Create the directory once:
 
 ```sh
 sudo install -d -o lixsu -g lixsu /app/lixionary-simulator
