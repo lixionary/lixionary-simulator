@@ -58,3 +58,72 @@ playwright.config.ts          Shared browser-test server
 ```
 
 To add another simulator, create a directory with its own `index.html` and source, register the HTML entry point in `vite.config.ts`, include its TypeScript and tests in the shared configuration, and add a card to the collection page.
+
+## Docker and deployment
+
+Production runs at **https://simulation.lixionary.com** on the x86 VPS reached with `ssh lixsu@lixionary.com`. Deployment files and the selected image reference live in `/app/lixionary-simulator`.
+
+```sh
+docker compose up --build --detach --wait
+```
+
+Open `http://127.0.0.1:8590`. The multi-stage Dockerfile runs the 48 unit tests and TypeScript/Vite build, then copies only the static output into an unprivileged Nginx image. Compose targets `linux/amd64`, including on ARM development machines, and binds only to localhost. The host's Nginx handles the public domain and TLS. All simulator directories, hashed assets, and the LTE worker are served directly; unknown URLs return 404.
+
+To run browser tests against the container:
+
+```sh
+BROWSER_BASE_URL=http://127.0.0.1:8590 npm run test:browser
+docker compose down
+```
+
+### GitHub Actions
+
+[Build and deploy simulator](.github/workflows/deploy.yml) runs on pull requests, pushes to `main`, and manual dispatches. It builds an x86 image, runs all 28 browser scenarios against the actual container, and publishes that tested image to `ghcr.io/lixionary/lixionary-simulator` on `main`. Images carry `sha-<full-commit-sha>` and `main` tags; deployments use the immutable registry digest.
+
+After publishing, the workflow uploads `compose.yaml` and `deploy/deploy.sh` over SSH and starts the image on the VPS. It waits for container health, checks each simulator page, and then verifies public HTTPS. A failed container start or local page check restores the previous image when available. The selected image is saved in the server's `.env`, so normal Compose commands keep using the deployed version. GitHub's temporary job token authenticates the registry pull through stdin and a temporary Docker configuration, which is removed after deployment. No registry password is stored on the VPS.
+
+The repository needs two Actions secrets:
+
+| Secret | Value |
+| --- | --- |
+| `DEPLOY_SSH_KEY` | Dedicated Ed25519 private key authorized for `lixsu` on the VPS |
+| `DEPLOY_KNOWN_HOSTS` | Trusted SSH host key entries for `lixionary.com` |
+
+The `production` GitHub environment records deployments. Pushes to other branches and pull requests test the container without deploying. Manual dispatches deploy only when run from `main`.
+
+### Initial VPS setup
+
+The VPS needs Docker with Compose v2 supporting `up --wait`, Nginx, Certbot's Nginx plugin, Bash, curl, and flock. `lixsu` needs Docker access and ownership of the deployment directory. Create the directory once:
+
+```sh
+sudo install -d -o lixsu -g lixsu /app/lixionary-simulator
+```
+
+Point `simulation.lixionary.com` to `157.173.112.110` using an A record or a CNAME to `lixionary.com`. Copy the host proxy configuration from `deploy/simulation.lixionary.com.conf` to the server, then run:
+
+```sh
+sudo install -m 644 simulation.lixionary.com.conf /etc/nginx/sites-available/simulation.lixionary.com.conf
+sudo ln -s /etc/nginx/sites-available/simulation.lixionary.com.conf /etc/nginx/sites-enabled/simulation.lixionary.com.conf
+sudo nginx -t
+sudo systemctl reload nginx
+sudo certbot --nginx --non-interactive --redirect -d simulation.lixionary.com
+```
+
+Certbot uses the VPS's existing ACME account and configures certificate renewal. Install the proxy once; the application workflow does not overwrite Certbot's TLS changes. Host ports 80 and 443 remain owned by the existing Nginx service.
+
+### Operations and rollback
+
+```sh
+ssh lixsu@lixionary.com
+cd /app/lixionary-simulator
+docker compose ps
+docker compose logs --tail 100 simulator
+```
+
+For rollback, use a previously deployed digest. The image must already exist on the VPS, or the shell must have registry pull access:
+
+```sh
+bash deploy/deploy.sh ghcr.io/lixionary/lixionary-simulator@sha256:<previous-digest>
+```
+
+For private images, pass a GitHub username as the second argument and pipe a token with `read:packages` on stdin. The script pulls before changing the running service; a registry failure leaves the current container running. Retain previous images if rollback is needed; this project does not prune shared VPS images.
