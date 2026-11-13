@@ -27,7 +27,7 @@ export function coordinates(day: number, tilt = EARTH_TILT) {
   const longitude = normalize(meanLongitude + 1.915 * Math.sin(anomaly) + 0.020 * Math.sin(2 * anomaly));
   const declination = Math.asin(Math.sin(tilt * RAD) * Math.sin(longitude * RAD)) / RAD;
   const rightAscension = normalize(Math.atan2(Math.cos(tilt * RAD) * Math.sin(longitude * RAD), Math.cos(longitude * RAD)) / RAD);
-  return { longitude, declination, rightAscension };
+  return { longitude, declination, rightAscension, meanLongitude };
 }
 export function altitude(latitude: number, declination: number, solarHour: number) {
   const phi = latitude * RAD, delta = declination * RAD, hourAngle = (solarHour - 12) * 15 * RAD;
@@ -51,11 +51,16 @@ export function duration(hours: number) {
   const minutes = Math.round(hours * 60);
   return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
 }
+export function nightDuration(dayHours: number) {
+  const minutes = 1440 - Math.round(dayHours * 60);
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
+}
 export function timeLabel(hours: number | null) {
   if (hours === null) return '—';
   const minutes = Math.round(hours * 60);
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 }
+export function longitudeLabel(longitude: number) { return `${Math.abs(longitude).toFixed(1)}°${longitude > 0 ? ' E' : longitude < 0 ? ' W' : ''}`; }
 export function latitudeLabel(latitude: number) { return `${Math.abs(latitude).toFixed(1)}°${latitude > 0 ? ' N' : latitude < 0 ? ' S' : ''}`; }
 export const EVENTS = [
   { day: 78, title: 'March equinox', short: 'Mar equinox', longitude: 0 },
@@ -63,3 +68,46 @@ export const EVENTS = [
   { day: 265, title: 'September equinox', short: 'Sep equinox', longitude: 180 },
   { day: 354, title: 'December solstice', short: 'Dec solstice', longitude: 270 },
 ];
+
+// Apparent minus mean solar time, in minutes. Always uses Earth's real tilt.
+export function equationOfTime(day: number) {
+  const { meanLongitude, rightAscension } = coordinates(day, EARTH_TILT);
+  return (((meanLongitude - rightAscension + 540) % 360) - 180) * 4;
+}
+const wrapDay = (hours: number) => (hours % 24 + 24) % 24;
+// Civil clock hour for a local apparent solar hour at an east-positive longitude.
+export function clockHour(solarHour: number, longitude: number, day: number, utcOffsetHours: number) {
+  return wrapDay(solarHour - longitude / 15 - equationOfTime(day) / 60 + utcOffsetHours);
+}
+export function solarHourFromUtc(utcHour: number, longitude: number, day: number) {
+  return wrapDay(utcHour + longitude / 15 + equationOfTime(day) / 60);
+}
+// Maps a real calendar date (device-local) onto the fixed 2026 calendar.
+export function todayAsDay(date: Date) {
+  const month = date.getMonth(), dayOfMonth = month === 1 ? Math.min(date.getDate(), 28) : date.getDate();
+  return Math.round((Date.UTC(YEAR, month, dayOfMonth, 12) - JAN_1) / DAY_MS);
+}
+export function utcOffsetHours(day: number) {
+  const date = dateForDay(day);
+  return -new Date(YEAR, date.getUTCMonth(), date.getUTCDate(), 12).getTimezoneOffset() / 60;
+}
+export function offsetLabel(offset: number) {
+  const minutes = Math.round(Math.abs(offset) * 60);
+  return `UTC${offset < 0 ? '−' : '+'}${Math.floor(minutes / 60)}${minutes % 60 ? `:${String(minutes % 60).padStart(2, '0')}` : ''}`;
+}
+export type Zone = 'tropical' | 'temperate' | 'polar';
+export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
+// Below this tilt the yearly swing is too small to call four seasons.
+export const MIN_SEASON_TILT = 5;
+export function climateZone(latitude: number, tilt = EARTH_TILT): Zone {
+  const absolute = Math.abs(latitude);
+  return absolute <= tilt ? 'tropical' : absolute >= 90 - tilt ? 'polar' : 'temperate';
+}
+// Astronomical season from the Sun's ecliptic longitude; null where four seasons do not apply.
+export function season(latitude: number, solarLongitude: number, tilt = EARTH_TILT): Season | null {
+  if (tilt < MIN_SEASON_TILT || climateZone(latitude, tilt) === 'tropical') return null;
+  // Longitudes are UTC-noon samples; half a day of motion (~0.5°) makes the day an
+  // equinox or solstice falls on count as the first day of the new season.
+  const quadrant = Math.floor(normalize(solarLongitude + .5 + (latitude < 0 ? 180 : 0)) / 90) % 4;
+  return (['spring', 'summer', 'autumn', 'winter'] as const)[quadrant];
+}
