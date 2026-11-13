@@ -5,6 +5,7 @@ A collection of interactive, browser-only teaching simulations. Each simulator h
 | Simulator | Local route | Source and model notes |
 | --- | --- | --- |
 | Collection | `/` | `src/` |
+| OSI Seven Layers — Packet Lab | `/osi/` | [osi/](osi/README.md) |
 | Error Detection — Bit Lab | `/error-detection/` | [error-detection/](error-detection/README.md) |
 | 4G LTE — Signal Lab | `/4g-lte/` | [4g-lte/](4g-lte/README.md) |
 | Apparent Annual Motion of the Sun — Sun Lab | `/apparent-annual-motion/` | [apparent-annual-motion/](apparent-annual-motion/README.md) |
@@ -35,12 +36,15 @@ npm run build
 BROWSER_PRODUCTION=1 npm run test:browser
 ```
 
-`npm run preview` serves the production build. Deploy the contents of `dist/` to a static host that serves directory `index.html` files. All four pages build together. Serve over HTTP; do not open HTML files directly from disk.
+`npm run preview` serves the production build. Deploy the contents of `dist/` to a static host that serves directory `index.html` files. All five pages build together. Serve over HTTP; do not open HTML files directly from disk.
 
 ## Project layout
 
 ```text
 src/                          Collection page and shared base styles
+osi/
+  index.html                  OSI Packet Lab entry point
+  src/                        Packet/checksum model, copper encoders, UI, unit tests
 4g-lte/
   index.html                  LTE entry point
   src/                        Original transceiver, UI, worker, numerical tests
@@ -52,7 +56,7 @@ apparent-annual-motion/
 error-detection/
   index.html                  Bit Lab entry point
   src/                        Error detection algorithms, traces, UI, unit tests
-tests/                        Collection, Sun, and Bit Lab browser scenarios
+tests/                        Collection, Sun, Bit Lab, and Packet Lab browser scenarios
 vite.config.ts                Multi-page build and unit-test discovery
 playwright.config.ts          Shared browser-test server
 ```
@@ -67,7 +71,7 @@ Production runs at **https://simulation.lixionary.com** on the x86 VPS reached w
 docker compose up --build --detach --wait
 ```
 
-Open `http://127.0.0.1:8590`. The multi-stage Dockerfile runs the 48 unit tests and TypeScript/Vite build, then copies only the static output into an unprivileged Nginx image. Compose targets `linux/amd64`, including on ARM development machines, and binds only to localhost. The host's Nginx handles the public domain and TLS. All simulator directories, hashed assets, and the LTE worker are served directly; unknown URLs return 404.
+Open `http://127.0.0.1:8590`. The multi-stage Dockerfile runs the unit tests and TypeScript/Vite build, then copies only the static output into an unprivileged Nginx image. Compose targets `linux/amd64`, including on ARM development machines, and binds only to localhost. The host's Nginx handles the public domain and TLS. All simulator directories, hashed assets, and the LTE worker are served directly; unknown URLs return 404.
 
 To run browser tests against the container:
 
@@ -78,7 +82,7 @@ docker compose down
 
 ### GitHub Actions
 
-[Build and deploy simulator](.github/workflows/deploy.yml) runs on pull requests, pushes to `main`, and manual dispatches. It builds an x86 image, runs all 28 browser scenarios against the actual container, and publishes that tested image to `ghcr.io/lixionary/lixionary-simulator` on `main`. Images carry `sha-<full-commit-sha>` and `main` tags; deployments use the immutable registry digest.
+[Build and deploy simulator](.github/workflows/deploy.yml) runs on pull requests, pushes to `main`, and manual dispatches. It builds an x86 image, runs all browser scenarios against the actual container, and publishes that tested image to `ghcr.io/lixionary/lixionary-simulator` on `main`. Images carry `sha-<full-commit-sha>` and `main` tags; deployments use the immutable registry digest.
 
 After publishing, the workflow uploads `compose.yaml` and `deploy/deploy.sh` over SSH and starts the image on the VPS. It waits for container health, checks each simulator page, and then verifies public HTTPS. A failed container start or local page check restores the previous image when available. The selected image is saved in the server's `.env`, so normal Compose commands keep using the deployed version. GitHub's temporary job token authenticates the registry pull through stdin and a temporary Docker configuration, which is removed after deployment. No registry password is stored on the VPS.
 

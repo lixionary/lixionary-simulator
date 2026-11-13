@@ -4,3 +4,6 @@
 
 .bit-card .card-art{background:#efe9f3}.bit-card .card-art text{fill:#8b759b}.bit-card .eyebrow{color:#877095}.bit-card .new-tag{background:#f5eff8;color:#886c9d;border-color:#d6c7e0}
 @media(min-width:1101px){.collection-cards{grid-template-columns:repeat(3,minmax(0,1fr))}.card-copy{padding:25px}.card-copy h3{font-size:24px}.card-copy h3>svg{width:20px}.card-copy .eyebrow{font-size:8px}}
+
+.packet-card .card-art{background:#eaf0e4}.packet-card .card-art text{fill:#738669}.packet-card .eyebrow{color:#708266}.packet-card .new-tag{background:#f0f5e9;color:#748964;border-color:#cbd7bb}
+@media(min-width:1101px){.collection-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}

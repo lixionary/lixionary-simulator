@@ -13,9 +13,10 @@ export default defineConfig({
         collection: fileURLToPath(new URL('./index.html', import.meta.url)),
         lte: fileURLToPath(new URL('./4g-lte/index.html', import.meta.url)),
         sun: fileURLToPath(new URL('./apparent-annual-motion/index.html', import.meta.url)),
+        osi: fileURLToPath(new URL('./osi/index.html', import.meta.url)),
         errors: fileURLToPath(new URL('./error-detection/index.html', import.meta.url)),
       },
     },
   },
-  test: { include: ['4g-lte/src/**/*.test.ts', 'apparent-annual-motion/src/**/*.test.ts', 'error-detection/src/**/*.test.ts'] },
+  test: { include: ['osi/src/**/*.test.ts', '4g-lte/src/**/*.test.ts', 'apparent-annual-motion/src/**/*.test.ts', 'error-detection/src/**/*.test.ts'] },
 });
