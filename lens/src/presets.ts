@@ -38,6 +38,13 @@ function microscope(): Bench {
   return { system: { elements: withIds([...objective, ...eyepiece.map(e => ({ ...e, x: e.x + shift }))]), stop: null, sensorX: null }, source, white: true };
 }
 
+function telescope(): Bench {
+  const objective = achromat(0, 2, 14), eyepiece = achromat(0, 0.25, 3.5, true);
+  const alone = (shapes: Shape[]): System => ({ elements: withIds(shapes), stop: null, sensorX: null });
+  const shift = paraxial(alone(objective)).rearFocal - paraxial(alone(eyepiece)).frontFocal;
+  return { system: alone([...objective, ...eyepiece.map(e => ({ ...e, x: e.x + shift }))]), source: { kind: 'parallel', angle: 0.5 }, white: true };
+}
+
 function triplet(): Bench {
   const elements = withIds([
     { x: 0, c1: 1 / 22.01359, c2: -1 / 435.76044, thickness: 3.25896, semi: 9, glass: 'denseCrown' },
@@ -60,4 +67,5 @@ export const PRESETS: Preset[] = [
     build: () => focused({ system: { elements: withIds(achromat(0, 1, 14)), stop: null, sensorX: null }, source: { kind: 'parallel', angle: 0 }, white: true }) },
   { key: 'camera', name: 'Camera lens (Cooke triplet)', group: 'Stacking lenses', notice: 'Convex, concave, convex with an aperture between. Three lenses give enough freedom to stay sharp in every colour and at an angle. Tilt the incoming light to test it.', build: triplet },
   { key: 'microscope', name: 'Compound microscope', group: 'Stacking lenses', notice: 'The objective throws a magnified real image into the tube. The eyepiece sits one focal length behind it and hands the eye parallel rays, magnifying a second time.', build: microscope },
+  { key: 'telescope', name: 'Refracting telescope', group: 'Stacking lenses', notice: 'A long-focus objective gathers parallel starlight into a small real image. A short-focus eyepiece turns it back into parallel rays at a steeper angle. The ratio of the two focal lengths is the magnification.', build: telescope },
 ];

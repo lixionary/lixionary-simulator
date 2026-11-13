@@ -127,6 +127,18 @@ describe('stacks', () => {
     for (const angle of [0, 10, 18]) expect(sharpestBlur(system, { kind: 'parallel', angle }), `${angle}°`).toBeLessThan(sharpestBlur(single, { kind: 'parallel', angle }) / 4);
     expect(sharpestBlur(system, far)).toBeLessThan(0.01);
   });
+  it('makes an afocal telescope that magnifies by the ratio of focal lengths', () => {
+    const { system, source } = preset('telescope'), image = imageOf(system, source);
+    const objective: System = { ...system, elements: system.elements.slice(0, 2) }, eyepiece: System = { ...system, elements: system.elements.slice(2) };
+    expect(image.kind).toBe('infinity');
+    expect(paraxial(system).focal).toBe(Infinity);
+    expect(image.angular).toBeCloseTo(-paraxial(objective).focal / paraxial(eyepiece).focal, 6);
+    expect(Math.abs(image.angular)).toBeCloseTo(8, 0);
+    expect(imageOf(objective, source).kind).toBe('real');
+    const slopes = samples(system, source, ['green']).map(r => r.b), mean = slopes.reduce((s, b) => s + b, 0) / slopes.length;
+    expect(Math.max(...slopes) - Math.min(...slopes)).toBeLessThan(0.01);
+    expect(mean).toBeCloseTo(image.angular * Math.tan(0.5 * Math.PI / 180), 2);
+  });
   it('makes a microscope from two stages', () => {
     const { system, source } = preset('microscope'), image = imageOf(system, source);
     const objective: System = { ...system, elements: system.elements.slice(0, 2) }, eyepiece: System = { ...system, elements: system.elements.slice(2) };

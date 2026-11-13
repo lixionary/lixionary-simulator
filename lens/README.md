@@ -15,8 +15,9 @@ Experiments run in a teaching order:
 | Achromatic doublet | Crown convex cemented to flint concave: colour and edge errors cancel, focusing power remains. |
 | Camera lens (Cooke triplet) | 50 mm f/4.7, convex–concave–convex around an aperture. Sharp in every colour and at a tilt. |
 | Compound microscope | An objective forms a magnified real image in the tube. An eyepiece hands the eye parallel rays, about 80× in total. |
+| Refracting telescope | A 200 mm objective and a 25 mm eyepiece share a focal point: parallel light in, parallel light out, 8× steeper. |
 
-`?preset=<key>` opens an experiment directly (`convex`, `concave`, `flaws`, `stopped`, `doublet`, `camera`, `microscope`). An unknown key opens the first experiment and says so. Edits to an experiment are not stored in the address.
+`?preset=<key>` opens an experiment directly (`convex`, `concave`, `flaws`, `stopped`, `doublet`, `camera`, `microscope`, `telescope`). An unknown key opens the first experiment and says so. Edits to an experiment are not stored in the address.
 
 Drag the object, any lens, the aperture, or the sensor on the bench. Every draggable item also has a slider, so the lab works from the keyboard. The light is either a nearby object (distance and height) or distant parallel light (tilt up to 25°), in green only or in white light (blue 486 nm, green 588 nm, red 656 nm). Each lens has a position, front and back curvature, centre thickness, diameter, and glass. Cemented lenses move together and keep their shared face matched. A change that cannot be built (edges that would meet, overlapping lenses, an aperture inside glass) is refused with a reason.
 
@@ -40,7 +41,7 @@ The vertical axis of the bench is stretched to fill the frame; the scale bar sta
 - `paraxial(system)`: focal length, focal points, principal planes, entrance beam radius, and f-number from ray-transfer matrices. `imageOf(system, source)`: textbook image position, height, magnification, and kind.
 - `colorShift`, `sphericalShift`, `equivalentSinglet`, `elementFocal`, `describe`.
 
-`src/presets.ts` holds the experiments. The triplet is the classic 40° Cooke triplet prescription with dense crown (n 1.620, V 60.3) and flint (n 1.620, V 36.4). The doublet was solved for this lab: crown (n 1.517, V 64.2) R 48.08 / −44.40 mm, flint R −44.40 / −393.4 mm, 6 + 2.5 mm thick, 99.9 mm focal length. The microscope scales that doublet to a 20 mm objective and a 25 mm eyepiece and places them by calculation.
+`src/presets.ts` holds the experiments. The triplet is the classic 40° Cooke triplet prescription with dense crown (n 1.620, V 60.3) and flint (n 1.620, V 36.4). The doublet was solved for this lab: crown (n 1.517, V 64.2) R 48.08 / −44.40 mm, flint R −44.40 / −393.4 mm, 6 + 2.5 mm thick, 99.9 mm focal length. The microscope scales that doublet to a 20 mm objective and a 25 mm eyepiece, the telescope to a 200 mm objective and a 25 mm eyepiece; both are placed by calculation.
 
 ## Limits of the model
 
@@ -56,4 +57,4 @@ npm run build
 BROWSER_PRODUCTION=1 npm run test:browser
 ```
 
-Unit tests cover dispersion, Snell's law, total internal reflection, aperture and rim clipping, the lensmaker's focal length against traced rays, the thin-lens equation for real and virtual images, two-lens combination, cementing, validation, every preset, doublet and triplet correction against an equivalent single lens, and microscope magnification. Browser tests cover navigation, each lens type, presets, white light, adding and removing lenses, validation messages, autofocus, dragging, keyboard control, preset links, and responsive layouts.
+Unit tests cover dispersion, Snell's law, total internal reflection, aperture and rim clipping, the lensmaker's focal length against traced rays, the thin-lens equation for real and virtual images, two-lens combination, cementing, validation, every preset, doublet and triplet correction against an equivalent single lens, and microscope and telescope magnification. Browser tests cover navigation, each lens type, presets, white light, adding and removing lenses, validation messages, autofocus, dragging, keyboard control, preset links, and responsive layouts.

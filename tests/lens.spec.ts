@@ -131,6 +131,12 @@ test('preset links open the microscope and reject unknown names', async ({ page 
   await expect(page.getByTestId('lens-magnification')).toHaveText('80×');
   await expect(page.locator('.lens-bench')).toContainText('image in the tube');
   await open(page, 'telescope');
+  await expect(page.getByTestId('lens-focal')).toHaveText('∞');
+  await expect(page.getByTestId('lens-image-type')).toHaveText('At infinity');
+  await expect(page.getByTestId('lens-magnification')).toHaveText('8.0×');
+  await expect(page.locator('.lens-bench')).toContainText('image in the tube');
+  await expect(page.getByRole('group', { name: 'Lenses on the bench' }).getByRole('button')).toHaveCount(4);
+  await open(page, 'periscope');
   await expect(page.getByText('That link names an experiment')).toBeVisible();
   await expect(page.getByTestId('lens-focal')).toHaveText('97.7 mm');
 });
