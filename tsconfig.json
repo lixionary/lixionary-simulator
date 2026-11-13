@@ -12,5 +12,5 @@
     "resolveJsonModule": true,
     "types": ["vite/client"]
   },
-  "include": ["game-of-life/src", "cpu/src", "osi/src", "src", "4g-lte/src", "4g-lte/tests", "apparent-annual-motion/src", "error-detection/src", "tests", "vite.config.ts", "playwright.config.ts"]
+  "include": ["lens/src", "game-of-life/src", "cpu/src", "osi/src", "src", "4g-lte/src", "4g-lte/tests", "apparent-annual-motion/src", "error-detection/src", "tests", "vite.config.ts", "playwright.config.ts"]
 }

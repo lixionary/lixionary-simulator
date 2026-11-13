@@ -6,7 +6,7 @@ async function finish(page: Page) {
 }
 test('collection opens CPU Lab and returns', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('06 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
+  await expect(page.getByText('07 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
   await page.locator('a[href="/cpu/"]').click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Small bytes.');
   await expect(page.getByTestId('cpu-cycles')).toHaveText('0');

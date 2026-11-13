@@ -120,7 +120,7 @@ jobs:
             "bash '$DEPLOY_PATH/deploy/deploy.sh' '$IMAGE_REF' '$GHCR_USER'"
       - name: Verify public HTTPS and all simulator pages
         run: |
-          for path in / /4g-lte/ /apparent-annual-motion/ /error-detection/ /osi/ /cpu/ /game-of-life/; do
+          for path in / /4g-lte/ /apparent-annual-motion/ /error-detection/ /osi/ /cpu/ /game-of-life/ /lens/; do
             curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 20 \
               "https://simulation.lixionary.com$path" --output /dev/null
           done

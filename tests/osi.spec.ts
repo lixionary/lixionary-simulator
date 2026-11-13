@@ -6,7 +6,7 @@ async function timeline(page: Page) { await page.locator('.pl-timeline > summary
 
 test('collection opens Packet Lab; all seven layers are interactive and return link works', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('06 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
+  await expect(page.getByText('07 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
   await page.locator('a[href="/osi/"]').click();
   await expect(page).toHaveTitle('Packet Lab — OSI Seven Layers');
   await expect(current(page)).toContainText('SYN · open a connection');
