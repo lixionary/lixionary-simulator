@@ -34,7 +34,7 @@ fi
 
 verify_pages() {
   local path
-  for path in / /4g-lte/ /apparent-annual-motion/ /error-detection/ /osi/ /cpu/ /game-of-life/ /lens/ /gps-relativity/ /gravitational-lensing/ /semiconductor/ /thermodynamics/; do
+  for path in / /4g-lte/ /apparent-annual-motion/ /error-detection/ /osi/ /cpu/ /game-of-life/ /lens/ /gps-relativity/ /gravitational-lensing/ /semiconductor/ /thermodynamics/ /numerical-integration/; do
     curl --fail --silent --show-error --max-time 10 "http://127.0.0.1:8590$path" --output /dev/null || return 1
   done
 }

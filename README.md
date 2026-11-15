@@ -5,6 +5,7 @@ A collection of interactive, browser-only teaching simulations. Each simulator h
 | Simulator | Local route | Source and model notes |
 | --- | --- | --- |
 | Collection | `/` | `src/` |
+| Numerical Integration — Integral Lab | `/numerical-integration/` | [numerical-integration/](numerical-integration/README.md) |
 | Thermodynamics — Heat Lab | `/thermodynamics/` | [thermodynamics/](thermodynamics/README.md) |
 | Semiconductors — Silicon Lab | `/semiconductor/` | [semiconductor/](semiconductor/README.md) |
 | Gravitational Lensing — Gravity Lens Lab | `/gravitational-lensing/` | [gravitational-lensing/](gravitational-lensing/README.md) |
@@ -43,12 +44,15 @@ npm run build
 BROWSER_PRODUCTION=1 npm run test:browser
 ```
 
-`npm run preview` serves the production build. Deploy the contents of `dist/` to a static host that serves directory `index.html` files. All twelve pages build together. Serve over HTTP; do not open HTML files directly from disk.
+`npm run preview` serves the production build. Deploy the contents of `dist/` to a static host that serves directory `index.html` files. All thirteen pages build together. Serve over HTTP; do not open HTML files directly from disk.
 
 ## Project layout
 
 ```text
 src/                          Collection page and shared base styles
+numerical-integration/
+  index.html                  Integral Lab entry point
+  src/                        Integration rules, error analysis, and adaptive model, SVG views, UI, unit tests
 thermodynamics/
   index.html                  Heat Lab entry point
   src/                        Carnot cycle, finite-rate engine, and heat pump model, SVG views, UI, unit tests

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('collection links to Bit Lab and back', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('11 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
+  await expect(page.getByText('12 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
   await page.locator('a[href="/error-detection/"]').click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('A tiny flip.');
   await expect(page.getByTestId('sent-frame')).toHaveText('Sent frame: 101100100');

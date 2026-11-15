@@ -6,7 +6,7 @@ const stage = (page: Page, name: RegExp) => page.getByRole('navigation', { name:
 test('collection opens Heat Lab and returns', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
-  await expect(page.getByText('11 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
+  await expect(page.getByText('12 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
   await page.locator('a[href="/thermodynamics/"]').click();
   await expect(page).toHaveTitle('Heat Lab · Lixionary Simulators');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Heat flows downhill.');

@@ -10,6 +10,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
+        integral: fileURLToPath(new URL('./numerical-integration/index.html', import.meta.url)),
         heat: fileURLToPath(new URL('./thermodynamics/index.html', import.meta.url)),
         silicon: fileURLToPath(new URL('./semiconductor/index.html', import.meta.url)),
         lensing: fileURLToPath(new URL('./gravitational-lensing/index.html', import.meta.url)),
@@ -25,5 +26,5 @@ export default defineConfig({
       },
     },
   },
-  test: { include: ['thermodynamics/src/**/*.test.ts', 'semiconductor/src/**/*.test.ts', 'gravitational-lensing/src/**/*.test.ts', 'gps-relativity/src/**/*.test.ts', 'lens/src/**/*.test.ts', 'game-of-life/src/**/*.test.ts', 'cpu/src/**/*.test.ts', 'osi/src/**/*.test.ts', '4g-lte/src/**/*.test.ts', 'apparent-annual-motion/src/**/*.test.ts', 'error-detection/src/**/*.test.ts'] },
+  test: { include: ['numerical-integration/src/**/*.test.ts', 'thermodynamics/src/**/*.test.ts', 'semiconductor/src/**/*.test.ts', 'gravitational-lensing/src/**/*.test.ts', 'gps-relativity/src/**/*.test.ts', 'lens/src/**/*.test.ts', 'game-of-life/src/**/*.test.ts', 'cpu/src/**/*.test.ts', 'osi/src/**/*.test.ts', '4g-lte/src/**/*.test.ts', 'apparent-annual-motion/src/**/*.test.ts', 'error-detection/src/**/*.test.ts'] },
 });

@@ -11,7 +11,7 @@ const lit = (page: Page, x: number, y: number) => page.locator('[data-sky="lense
 test('collection opens Gravity Lens Lab and returns', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
-  await expect(page.getByText('11 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
+  await expect(page.getByText('12 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
   await page.locator('a[href="/gravitational-lensing/"]').click();
   await expect(page).toHaveTitle('Gravity Lens Lab · Lixionary Simulators');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Mass bends light.');

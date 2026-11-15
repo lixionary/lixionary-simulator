@@ -10,7 +10,7 @@ async function metres(page: Page, id: string) {
 test('collection opens Relativity Lab and returns', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
-  await expect(page.getByText('11 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
+  await expect(page.getByText('12 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
   await page.locator('a[href="/gps-relativity/"]').click();
   await expect(page).toHaveTitle('Relativity Lab · Lixionary Simulators');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Time runs fast in orbit.');
