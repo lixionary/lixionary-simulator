@@ -5,6 +5,8 @@ A collection of interactive, browser-only teaching simulations. Each simulator h
 | Simulator | Local route | Source and model notes |
 | --- | --- | --- |
 | Collection | `/` | `src/` |
+| Thermodynamics — Heat Lab | `/thermodynamics/` | [thermodynamics/](thermodynamics/README.md) |
+| Semiconductors — Silicon Lab | `/semiconductor/` | [semiconductor/](semiconductor/README.md) |
 | Gravitational Lensing — Gravity Lens Lab | `/gravitational-lensing/` | [gravitational-lensing/](gravitational-lensing/README.md) |
 | GPS and Relativity — Relativity Lab | `/gps-relativity/` | [gps-relativity/](gps-relativity/README.md) |
 | Lenses — Lens Lab | `/lens/` | [lens/](lens/README.md) |
@@ -41,12 +43,18 @@ npm run build
 BROWSER_PRODUCTION=1 npm run test:browser
 ```
 
-`npm run preview` serves the production build. Deploy the contents of `dist/` to a static host that serves directory `index.html` files. All ten pages build together. Serve over HTTP; do not open HTML files directly from disk.
+`npm run preview` serves the production build. Deploy the contents of `dist/` to a static host that serves directory `index.html` files. All twelve pages build together. Serve over HTTP; do not open HTML files directly from disk.
 
 ## Project layout
 
 ```text
 src/                          Collection page and shared base styles
+thermodynamics/
+  index.html                  Heat Lab entry point
+  src/                        Carnot cycle, finite-rate engine, and heat pump model, SVG views, UI, unit tests
+semiconductor/
+  index.html                  Silicon Lab entry point
+  src/                        Junction, MOS transistor, and CMOS gate model, SVG views, UI, unit tests
 gravitational-lensing/
   index.html                  Gravity Lens Lab entry point
   src/                        Lens equation model, pixel renderer, SVG views, UI, unit tests

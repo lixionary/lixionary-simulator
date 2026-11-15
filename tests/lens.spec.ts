@@ -10,7 +10,7 @@ async function microns(page: Page, id: string) {
 test('collection opens Lens Lab and returns', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
-  await expect(page.getByText('09 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
+  await expect(page.getByText('11 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
   await page.locator('a[href="/lens/"]').click();
   await expect(page).toHaveTitle('Lens Lab · Lixionary Simulators');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('A stack makes it sharp.');
