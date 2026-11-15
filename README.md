@@ -5,6 +5,8 @@ A collection of interactive, browser-only teaching simulations. Each simulator h
 | Simulator | Local route | Source and model notes |
 | --- | --- | --- |
 | Collection | `/` | `src/` |
+| Gravitational Lensing — Gravity Lens Lab | `/gravitational-lensing/` | [gravitational-lensing/](gravitational-lensing/README.md) |
+| GPS and Relativity — Relativity Lab | `/gps-relativity/` | [gps-relativity/](gps-relativity/README.md) |
 | Lenses — Lens Lab | `/lens/` | [lens/](lens/README.md) |
 | Population — Population Lab | `/game-of-life/` | [game-of-life/](game-of-life/README.md) |
 | CPU — Clockwork Lab | `/cpu/` | [cpu/](cpu/README.md) |
@@ -39,12 +41,18 @@ npm run build
 BROWSER_PRODUCTION=1 npm run test:browser
 ```
 
-`npm run preview` serves the production build. Deploy the contents of `dist/` to a static host that serves directory `index.html` files. All eight pages build together. Serve over HTTP; do not open HTML files directly from disk.
+`npm run preview` serves the production build. Deploy the contents of `dist/` to a static host that serves directory `index.html` files. All ten pages build together. Serve over HTTP; do not open HTML files directly from disk.
 
 ## Project layout
 
 ```text
 src/                          Collection page and shared base styles
+gravitational-lensing/
+  index.html                  Gravity Lens Lab entry point
+  src/                        Lens equation model, pixel renderer, SVG views, UI, unit tests
+gps-relativity/
+  index.html                  Relativity Lab entry point
+  src/                        Clock-rate and position-fix model, SVG views, UI, unit tests
 lens/
   index.html                  Lens Lab entry point
   src/                        Ray-tracing engine, presets, bench UI, unit tests

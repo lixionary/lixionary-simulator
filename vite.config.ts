@@ -10,6 +10,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
+        lensing: fileURLToPath(new URL('./gravitational-lensing/index.html', import.meta.url)),
+        relativity: fileURLToPath(new URL('./gps-relativity/index.html', import.meta.url)),
         lens: fileURLToPath(new URL('./lens/index.html', import.meta.url)),
         life: fileURLToPath(new URL('./game-of-life/index.html', import.meta.url)),
         cpu: fileURLToPath(new URL('./cpu/index.html', import.meta.url)),
@@ -21,5 +23,5 @@ export default defineConfig({
       },
     },
   },
-  test: { include: ['lens/src/**/*.test.ts', 'game-of-life/src/**/*.test.ts', 'cpu/src/**/*.test.ts', 'osi/src/**/*.test.ts', '4g-lte/src/**/*.test.ts', 'apparent-annual-motion/src/**/*.test.ts', 'error-detection/src/**/*.test.ts'] },
+  test: { include: ['gravitational-lensing/src/**/*.test.ts', 'gps-relativity/src/**/*.test.ts', 'lens/src/**/*.test.ts', 'game-of-life/src/**/*.test.ts', 'cpu/src/**/*.test.ts', 'osi/src/**/*.test.ts', '4g-lte/src/**/*.test.ts', 'apparent-annual-motion/src/**/*.test.ts', 'error-detection/src/**/*.test.ts'] },
 });

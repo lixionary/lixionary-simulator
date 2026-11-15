@@ -9,7 +9,7 @@ async function step(page: Page, count = 1) {
 test('collection opens Population Lab and returns', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
-  await expect(page.getByText('07 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
+  await expect(page.getByText('09 SIMULATORS · ENDLESS WHAT-IFS')).toBeVisible();
   await page.locator('a[href="/game-of-life/"]').click();
   await expect(page).toHaveTitle('Population Lab · Lixionary Simulators');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('A delicate balance.');
